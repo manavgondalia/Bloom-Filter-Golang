@@ -1,4 +1,6 @@
-package main
+package common
+
+import "github.com/spaolacci/murmur3"
 
 // import "fmt"
 
@@ -50,6 +52,21 @@ func dbj2(data string) uint64 {
 	return hash
 }
 
+func HashFuncArrayGenerator(num_func uint64) []func(data string) uint64 {
+	HashFunctionsArray := []func(data string) uint64{FNV_1, FNV_1A, FNV1A_VariantA, FNV1A_VariantB, dbj2}
+	if num_func > 5 {
+		// add more murmur3 with different seeds
+		for i := 0; uint64(i) < num_func-5; i++ {
+			func_to_add := func(data string) uint64 {
+				seed := uint64(i)
+				// implement murmur3 hash function
+				return murmur3.Sum64WithSeed([]byte(data), uint32(seed))
 
+			}
+			HashFunctionsArray = append(HashFunctionsArray, func_to_add)
+		}
+	}
+	return HashFunctionsArray
+}
 
-var HashFunctionsArray = []func(data string) uint64{FNV_1, FNV_1A, FNV1A_VariantA, FNV1A_VariantB, dbj2, }
+// var HashFunctionsArray = []func(data string) uint64{FNV_1, FNV_1A, FNV1A_VariantA, FNV1A_VariantB, dbj2}
