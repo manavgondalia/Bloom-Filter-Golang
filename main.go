@@ -7,6 +7,7 @@ import (
 	"go-spell-checker/hashes"
 	"math"
 	"os"
+	"strings"
 )
 
 type BloomFilter struct {
@@ -159,7 +160,7 @@ func LoadAndUse() {
 	}
 
 	for _, word := range testWords {
-		if bf.Check(word) {
+		if bf.Check(strings.ToLower(word)) {
 			fmt.Printf("Word '%s' is possibly in the Bloom filter.\n", word)
 		} else {
 			fmt.Printf("Word '%s' is definitely not in the Bloom filter.\n", word)
@@ -196,6 +197,7 @@ func main() {
 	defer file.Close()
 
 	var word string
+	var dictionaryWords []string
 
 	if *numElements == -1 {
 		*numElements = 0
@@ -205,6 +207,7 @@ func main() {
 				break
 			}
 			*numElements++
+			dictionaryWords = append(dictionaryWords, word)
 		}
 	}
 
@@ -221,21 +224,8 @@ func main() {
 	fmt.Println("Number of hash functions: ", bf.K)
 	fmt.Println("Number of elements: ", bf.N)
 
-	// Add elements from the dictionary file to the Bloom filter
-	file, err = os.Open(*build)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	defer file.Close()
-
 	for i := 0; i < *numElements; i++ {
-		_, err := fmt.Fscanln(file, &word)
-		if err != nil {
-			break
-		}
-		bf.Add(word)
+		bf.Add(strings.ToLower(dictionaryWords[i]))
 	}
 
 	// Dump the bloom filter to the file to disk for loading later
