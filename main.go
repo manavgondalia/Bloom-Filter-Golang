@@ -138,8 +138,25 @@ func LoadAndUse() {
 		return
 	}
 
-	// Can modify this as per the scenario of checking membership
-	testWords := []string{"hello", "world", "foo", "BAR"}
+	// get testWords from testing.txt
+	file, err := os.Open("testing.txt")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer file.Close()
+
+	var word string
+	var testWords []string
+
+	for {
+		_, err := fmt.Fscanln(file, &word)
+		if err != nil {
+			break
+		}
+		testWords = append(testWords, word)
+	}
 
 	for _, word := range testWords {
 		if bf.Check(word) {
