@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"go-spell-checker/common"
+	"go-spell-checker/hashes"
 	"math"
 	"os"
 )
@@ -23,7 +23,7 @@ func NewBloomFilter(k uint64, m uint64, n uint64) *BloomFilter {
 		K:             k,
 		M:             m,
 		N:             n,
-		HashFunctions: common.HashFuncArrayGenerator(k)[:k],
+		HashFunctions: hashes.HashFuncArrayGenerator(k)[:k],
 		// if more hash fucntions needed, use murmur3 hash functions with different seeds
 	}
 }
@@ -112,7 +112,7 @@ func LoadBloomFilterFromFile(filename string) (*BloomFilter, error) {
 		K:             uint64(k),
 		M:             uint64(m),
 		N:             0, // This value is not stored in the file
-		HashFunctions: common.HashFuncArrayGenerator(uint64(k))[:uint64(k)],
+		HashFunctions: hashes.HashFuncArrayGenerator(uint64(k))[:k],
 	}
 
 	// Read bitset
@@ -131,35 +131,44 @@ func LoadBloomFilterFromFile(filename string) (*BloomFilter, error) {
 	return bf, nil
 }
 
+func LoadAndUse() {
+	bf, err := LoadBloomFilterFromFile("words.bf")
+	if err != nil {
+		fmt.Println("Error loading Bloom filter:", err)
+		return
+	}
+
+	// Can modify this as per the scenario of checking membership
+	testWords := []string{"hello", "world", "foo", "BAR"}
+
+	for _, word := range testWords {
+		if bf.Check(word) {
+			fmt.Printf("Word '%s' is possibly in the Bloom filter.\n", word)
+		} else {
+			fmt.Printf("Word '%s' is definitely not in the Bloom filter.\n", word)
+		}
+	}
+}
+
 func main() {
 
-	// take false probability rate and number of elements from command line arguments
-
-	build := flag.String("build", "", "Path to dictionary file to build Bloom filter")
+	// Take false probability rate and number of elements from command line arguments
+	load := flag.Int("load", 0, "Whether to load Bloom filter from file")
+	build := flag.String("build", "words.txt", "Path to dictionary file to build Bloom filter")
 	fpRate := flag.Float64("fp", 0.01, "False probability rate")
-	numElements := flag.Int("n", 373240, "Number of elements")
+	numElements := flag.Int("n", -1, "Number of elements")
 
 	flag.Parse()
+
+	if *load == 1 {
+		LoadAndUse()
+		return
+	}
 
 	if *build == "" {
 		fmt.Println("Please specify the path to the dictionary file using the -build flag.")
 		return
 	}
-
-	// calculate size of bitset and number of hash functions
-
-	size := -1 * float64(*numElements) * (math.Log(*fpRate) / math.Pow(math.Log(2), 2))
-	size = math.Ceil(size)
-
-	k := (size / float64(*numElements)) * math.Log(2)
-	k = math.Ceil(k)
-
-	bf := NewBloomFilter(uint64(k), uint64(size), uint64(*numElements))
-
-	fmt.Println("Size of bitset: ", bf.M)
-	fmt.Println("Number of hash functions: ", bf.K)
-
-	// read elements to add from the file words.txt, each line contains one word
 
 	file, err := os.Open(*build)
 	if err != nil {
@@ -171,31 +180,49 @@ func main() {
 
 	var word string
 
-	// add only numElements words to the bloom filter
-
 	if *numElements == -1 {
+		*numElements = 0
 		for {
 			_, err := fmt.Fscanln(file, &word)
 			if err != nil {
 				break
 			}
-			bf.Add(word)
-
-		}
-	} else {
-		for i := 0; i < *numElements; i++ {
-			_, err := fmt.Fscanln(file, &word)
-			if err != nil {
-				break
-			}
-			bf.Add(word)
+			*numElements++
 		}
 	}
 
-	// dump the bloom filter to the file to disk for loading later
-	fmt.Println(bf.Check("hello"))
-	fmt.Println(bf.Check("world"))
-	fmt.Println(bf.Check("foo"))
+	// Calculate size of bitset and number of hash functions
+	size := -1 * float64(*numElements) * (math.Log(*fpRate) / math.Pow(math.Log(2), 2))
+	size = math.Ceil(size)
+
+	k := (size / float64(*numElements)) * math.Log(2)
+	k = math.Ceil(k)
+
+	bf := NewBloomFilter(uint64(k), uint64(size), uint64(*numElements))
+
+	fmt.Println("Size of bitset: ", bf.M)
+	fmt.Println("Number of hash functions: ", bf.K)
+	fmt.Println("Number of elements: ", bf.N)
+
+	// Add elements from the dictionary file to the Bloom filter
+	file, err = os.Open(*build)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer file.Close()
+
+	for i := 0; i < *numElements; i++ {
+		_, err := fmt.Fscanln(file, &word)
+		if err != nil {
+			break
+		}
+		fmt.Print(word, " ")
+		bf.Add(word)
+	}
+
+	// Dump the bloom filter to the file to disk for loading later
 
 	err = bf.SaveToFile("words.bf")
 	if err != nil {
@@ -205,21 +232,8 @@ func main() {
 
 	fmt.Println("Bloom filter saved to words.bf")
 
-	// // Load the bloom filter from the file
-	// bf, err = LoadBloomFilterFromFile("words.bf")
-	// if err != nil {
-	// 	fmt.Println("Error loading Bloom filter:", err)
-	// 	return
-	// }
-
-	// // Test examples
-	// testWords := []string{"hello", "world", "foo", "bar"}
-
-	// for _, word := range testWords {
-	// 	if bf.Check(word) {
-	// 		fmt.Printf("Word '%s' is possibly in the Bloom filter.\n", word)
-	// 	} else {
-	// 		fmt.Printf("Word '%s' is definitely not in the Bloom filter.\n", word)
-	// 	}
-	// }
+	// Test examples
+	fmt.Println(bf.Check("hello"))
+	fmt.Println(bf.Check("world"))
+	fmt.Println(bf.Check("foo"))
 }

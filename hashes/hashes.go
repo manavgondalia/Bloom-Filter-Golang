@@ -1,4 +1,4 @@
-package common
+package hashes
 
 import "github.com/spaolacci/murmur3"
 
