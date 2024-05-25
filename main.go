@@ -218,7 +218,6 @@ func main() {
 		if err != nil {
 			break
 		}
-		fmt.Print(word, " ")
 		bf.Add(word)
 	}
 
