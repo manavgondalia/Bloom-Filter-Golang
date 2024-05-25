@@ -55,6 +55,7 @@ func (bf *BloomFilter) SaveToFile(filename string) error {
 	defer file.Close()
 
 	// Write custom header
+	// We are using BIG ENDIAN for the header fields to make it easier to read
 	header := make([]byte, 12)
 	copy(header[0:4], "CCBF")
 	binary.BigEndian.PutUint16(header[4:6], 1)             // version number
@@ -132,8 +133,8 @@ func LoadBloomFilterFromFile(filename string) (*BloomFilter, error) {
 	return bf, nil
 }
 
-func LoadAndUse() {
-	bf, err := LoadBloomFilterFromFile("words.bf")
+func LoadAndUse(bf_file string) {
+	bf, err := LoadBloomFilterFromFile(bf_file)
 	if err != nil {
 		fmt.Println("Error loading Bloom filter:", err)
 		return
@@ -173,13 +174,14 @@ func main() {
 	// Take false probability rate and number of elements from command line arguments
 	load := flag.Int("load", 0, "Whether to load Bloom filter from file")
 	build := flag.String("build", "words.txt", "Path to dictionary file to build Bloom filter")
+	bf_file := flag.String("bf", "words.bf", "Path to Bloom filter file")
 	fpRate := flag.Float64("fp", 0.01, "False probability rate")
 	numElements := flag.Int("n", -1, "Number of elements")
 
 	flag.Parse()
 
 	if *load == 1 {
-		LoadAndUse()
+		LoadAndUse(*bf_file)
 		return
 	}
 
@@ -237,9 +239,4 @@ func main() {
 	}
 
 	fmt.Println("Bloom filter saved to words.bf")
-
-	// Test examples
-	fmt.Println(bf.Check("hello"))
-	fmt.Println(bf.Check("world"))
-	fmt.Println(bf.Check("foo"))
 }
