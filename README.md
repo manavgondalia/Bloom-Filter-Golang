@@ -8,6 +8,7 @@ A Bloom filter is a probabilistic data structure that provides a space-efficient
 
 1. Bloom filters are very space efficient compared to other data structures like hash tables.
 2. Bloom filters are probabilistic in nature. Bloom filters can yield false positives but never false negatives. This means they can tell us if an element is definitely not in the set or if it is possibly in the set.
+   - We will use this feature for the spell checker. All the common english [words](https://github.com/dwyl/english-words/blob/master/words.txt) are inserted into the bloom filter. For a new word, if it is not present in the bloom filter, we conclude that it is misspelt. Otherwise the word may be correctly spelt ('maybe' because of possible hashing colisions).
 
 ## Usage
 
