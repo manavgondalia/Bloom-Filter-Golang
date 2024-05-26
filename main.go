@@ -133,13 +133,7 @@ func LoadBloomFilterFromFile(filename string) (*BloomFilter, error) {
 	return bf, nil
 }
 
-func LoadAndUse(bf_file string) {
-	bf, err := LoadBloomFilterFromFile(bf_file)
-	if err != nil {
-		fmt.Println("Error loading Bloom filter:", err)
-		return
-	}
-
+func UseBloomFilter(bf *BloomFilter) {
 	// get testWords from testing.txt
 	file, err := os.Open("testing.txt")
 	if err != nil {
@@ -162,11 +156,20 @@ func LoadAndUse(bf_file string) {
 
 	for _, word := range testWords {
 		if bf.Check(strings.ToLower(word)) {
-			fmt.Printf("Word '%s' is possibly in the Bloom filter.\n", word)
+			fmt.Printf("Word '%s' is possibly correctly spelt.\n", word)
 		} else {
-			fmt.Printf("Word '%s' is definitely not in the Bloom filter.\n", word)
+			fmt.Printf("Word '%s' is definitely not correctly spelt.\n", word)
 		}
 	}
+}
+
+func LoadAndUse(bf_file string) {
+	bf, err := LoadBloomFilterFromFile(bf_file)
+	if err != nil {
+		fmt.Println("Error loading Bloom filter:", err)
+		return
+	}
+	UseBloomFilter(bf)
 }
 
 func main() {
@@ -174,7 +177,7 @@ func main() {
 	// Take false probability rate and number of elements from command line arguments
 	load := flag.Int("load", 0, "Whether to load Bloom filter from file")
 	build := flag.String("build", "words.txt", "Path to dictionary file to build Bloom filter")
-	bf_file := flag.String("bf", "words.bf", "Path to Bloom filter file")
+	bf_file := flag.String("bf", "compiled_bloom_filter.bf", "Path to Bloom filter file")
 	fpRate := flag.Float64("fp", 0.01, "False probability rate")
 	numElements := flag.Int("n", -1, "Number of elements")
 
@@ -231,12 +234,13 @@ func main() {
 	}
 
 	// Dump the bloom filter to the file to disk for loading later
-
-	err = bf.SaveToFile("words.bf")
+	err = bf.SaveToFile("compiled_bloom_filter.bf")
 	if err != nil {
 		fmt.Println("Error saving Bloom filter:", err)
 		return
 	}
 
-	fmt.Println("Bloom filter saved to words.bf")
+	fmt.Println("Bloom filter saved to compiled_bloom_filter.bf")
+
+	UseBloomFilter(bf)
 }
